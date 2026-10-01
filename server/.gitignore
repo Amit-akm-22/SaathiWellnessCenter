@@ -1,0 +1,29 @@
+# Server Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads & Temporary files
+uploads/
+temp/
+tmp/
+*.tmp
+*.csv
+!seed/*.csv
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Testing scratch files
+test_*.js

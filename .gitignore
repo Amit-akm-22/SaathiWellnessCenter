@@ -1,0 +1,87 @@
+# ==========================================
+# Saathi Wellness Center - Git Ignore
+# ==========================================
+
+# 1. Environment Variables & Secrets (CRITICAL: Never commit credentials)
+.env
+.env.production
+.env.staging
+.env.test
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+server/.env
+server/.env.*
+!server/.env.example
+client/.env
+client/.env.*
+!client/.env.example
+
+# 2. Dependencies
+node_modules/
+server/node_modules/
+client/node_modules/
+.pnp
+.pnp.js
+
+# 3. Build & Production Outputs
+dist/
+dist-ssr/
+build/
+client/dist/
+client/dist-ssr/
+client/build/
+*.tsbuildinfo
+
+# 4. Logs & Debugging
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 5. Runtime Data, Uploads & Temporary Export Files
+uploads/
+server/uploads/
+temp/
+tmp/
+*.tmp
+*.csv
+!server/seed/*.csv
+!client/public/*.csv
+
+# 6. Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# 7. IDE & Code Editor Files
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 8. Testing & Code Coverage
+coverage/
+.nyc_output/
+*.lcov
+test_admin.js
+server/test_admin.js
