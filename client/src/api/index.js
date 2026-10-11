@@ -24,11 +24,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Don't redirect if already on login/register page
-      if (
-        !window.location.pathname.includes('/login') &&
-        !window.location.pathname.includes('/register')
-      ) {
+      // Don't redirect if already on login page
+      if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     }

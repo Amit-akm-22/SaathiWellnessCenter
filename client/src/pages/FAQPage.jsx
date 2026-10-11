@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { faqAPI } from '../api';
+import { useTheme } from '../context/ThemeContext';
+import { LuSearch, LuChevronDown } from 'react-icons/lu';
 
 const FAQPage = () => {
+  const { isDark } = useTheme();
   const [faqs, setFaqs] = useState({});
   const [search, setSearch] = useState('');
   const [openItems, setOpenItems] = useState({});
@@ -27,7 +30,6 @@ const FAQPage = () => {
   const handleSearch = (e) => {
     const val = e.target.value;
     setSearch(val);
-    // Debounce search
     clearTimeout(window._faqSearchTimeout);
     window._faqSearchTimeout = setTimeout(() => {
       fetchFAQs(val);
@@ -44,17 +46,17 @@ const FAQPage = () => {
     'Everyday Struggles': '🌱',
   };
 
-  const categoryColors = {
-    'Understanding Mental Health': 'border-teal-200 bg-teal-50',
-    'About Counselling': 'border-lavender-200 bg-lavender-50',
-    'Everyday Struggles': 'border-warm-200 bg-warm-50',
-  };
+  const pageBg = isDark ? 'text-[#F7F8FA]' : 'text-[#102D4F]';
+  const headingColor = isDark ? 'text-[#F7F8FA]' : 'text-[#102D4F]';
+  const subtextColor = isDark ? 'text-[#CBD5E1]' : 'text-[#526579]';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className={`max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 transition-colors duration-200 ${pageBg}`}>
       <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-800 mb-3">Frequently Asked Questions</h1>
-        <p className="text-gray-500 max-w-xl mx-auto">
+        <h1 className={`text-3xl font-extrabold mb-3 tracking-tight ${headingColor}`}>
+          Frequently Asked Questions
+        </h1>
+        <p className={`max-w-xl mx-auto text-sm sm:text-base ${subtextColor}`}>
           Learn about mental health, counselling, and how to manage everyday challenges. 
           Knowledge is the first step towards feeling better.
         </p>
@@ -63,71 +65,99 @@ const FAQPage = () => {
       {/* Search */}
       <div className="mb-8">
         <div className="relative max-w-md mx-auto">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <LuSearch
+            className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 ${
+              isDark ? 'text-[#A7F477]' : 'text-[#075E50]'
+            }`}
+          />
           <input
             type="text"
             value={search}
             onChange={handleSearch}
-            placeholder="Search questions..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+            placeholder="Search questions (e.g. anxiety, confidentiality)..."
+            className={`w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all focus:outline-none focus:ring-2 ${
+              isDark
+                ? 'bg-[#172431] border border-[#243547] text-[#F7F8FA] placeholder-[#64748B] focus:ring-[#A7F477]'
+                : 'bg-white border border-[#DFE4E6] text-[#102D4F] placeholder-[#94A3B8] focus:ring-[#A7F477] shadow-sm'
+            }`}
           />
         </div>
       </div>
 
       {/* Disclaimer */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8 text-sm text-amber-800">
-        <span className="font-medium">📝 Note:</span> These FAQs are for general awareness and education only. 
-        They are not a substitute for a professional diagnosis. If you're struggling, please book a session with our counsellor.
+      <div
+        className={`border rounded-2xl p-4 sm:p-5 mb-8 text-xs sm:text-sm flex items-start gap-3 transition-colors ${
+          isDark
+            ? 'bg-[#132A38] border-[#243E50] text-[#CBD5E1]'
+            : 'bg-[#EAF5ED] border-[#CFE3D4] text-[#102D4F]'
+        }`}
+      >
+        <span className="text-lg">📝</span>
+        <p className="leading-relaxed">
+          <strong>Note:</strong> These FAQs are for general awareness and education only. They are not a substitute for a professional clinical diagnosis. If you're struggling, please book a free appointment with our college faculty counsellor.
+        </p>
       </div>
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="text-gray-400 mt-4">Loading FAQs...</p>
+          <div className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto ${isDark ? 'border-[#A7F477]' : 'border-[#075E50]'}`}></div>
+          <p className={`mt-4 text-xs font-medium ${subtextColor}`}>Loading FAQs...</p>
         </div>
       ) : error ? (
-        <div className="text-center py-12 text-red-600">{error}</div>
+        <div className="text-center py-12 text-red-500 text-sm font-semibold">{error}</div>
       ) : Object.keys(faqs).length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          No FAQs found{search ? ` for "${search}"` : ''}. Try a different search.
+        <div className={`text-center py-12 text-sm ${subtextColor}`}>
+          No FAQs found{search ? ` for "${search}"` : ''}. Try a different search term.
         </div>
       ) : (
         <div className="space-y-8">
           {Object.entries(faqs).map(([category, items]) => (
             <div key={category}>
-              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${headingColor}`}>
                 <span>{categoryIcons[category] || '📌'}</span>
-                {category}
+                <span>{category}</span>
               </h2>
-              <div className="space-y-2">
-                {items.map((faq) => (
-                  <div
-                    key={faq._id}
-                    className={`border rounded-lg overflow-hidden ${categoryColors[category] || 'border-gray-200 bg-gray-50'}`}
-                  >
-                    <button
-                      onClick={() => toggleItem(faq._id)}
-                      className="w-full text-left p-4 flex justify-between items-center hover:bg-white/50 transition-colors"
+              <div className="space-y-3">
+                {items.map((faq) => {
+                  const isOpen = openItems[faq._id];
+                  return (
+                    <div
+                      key={faq._id}
+                      className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
+                        isDark
+                          ? 'bg-[#172431] border-[#243547] hover:border-[#A7F477]/40'
+                          : 'bg-[#FCFBF8] border-[#DFE4E6] hover:border-[#CBD5E1] shadow-sm'
+                      }`}
                     >
-                      <span className="font-medium text-gray-800 pr-4">{faq.question}</span>
-                      <svg
-                        className={`w-5 h-5 text-gray-500 flex-shrink-0 transition-transform ${
-                          openItems[faq._id] ? 'rotate-180' : ''
+                      <button
+                        onClick={() => toggleItem(faq._id)}
+                        className={`w-full text-left p-4 sm:p-5 flex justify-between items-center transition-colors ${
+                          isDark ? 'hover:bg-white/5' : 'hover:bg-[#F8FAF9]'
                         }`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {openItems[faq._id] && (
-                      <div className="px-4 pb-4 text-gray-600 text-sm leading-relaxed bg-white/60">
-                        {faq.answer}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                        <span className={`font-semibold text-sm sm:text-base pr-4 ${headingColor}`}>
+                          {faq.question}
+                        </span>
+                        <LuChevronDown
+                          className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
+                            isDark ? 'text-[#A7F477]' : 'text-[#075E50]'
+                          } ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                      {isOpen && (
+                        <div
+                          className={`px-4 sm:px-5 pb-4 sm:pb-5 text-sm leading-relaxed border-t ${
+                            isDark
+                              ? 'bg-[#101C28]/80 text-[#CBD5E1] border-[#243547]'
+                              : 'bg-white/70 text-[#526579] border-[#DFE4E6]/60'
+                          }`}
+                        >
+                          {faq.answer}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
