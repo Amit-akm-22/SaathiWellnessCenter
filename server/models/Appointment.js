@@ -15,7 +15,7 @@ const appointmentSchema = new mongoose.Schema(
     branch: {
       type: String,
       required: true,
-      enum: ['CSE', 'IT', 'ECE', 'EE', 'Mechanical', 'Civil', 'Other'],
+      trim: true,
     },
     year: {
       type: String,

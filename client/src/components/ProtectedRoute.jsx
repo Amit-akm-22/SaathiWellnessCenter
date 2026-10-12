@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export const ProtectedRoute = ({ children, role }) => {
+export const ProtectedRoute = ({ children, role, allowIncomplete = false }) => {
   const { user, loading, isAuthenticated } = useAuth();
 
   if (loading) {
@@ -16,12 +16,17 @@ export const ProtectedRoute = ({ children, role }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // If student profile is incomplete and route doesn't allow incomplete profiles, redirect to /complete-profile
+  if (user?.role === 'student' && !user?.isProfileComplete && !allowIncomplete) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+
   if (role) {
     const isAllowed = user.role === role || (role === 'counselor' && user.role === 'admin');
     if (!isAllowed) {
       // Redirect to appropriate dashboard
       const dashboards = {
-        student: '/student/dashboard',
+        student: user?.isProfileComplete ? '/student/dashboard' : '/complete-profile',
         counselor: '/counselor/dashboard',
         admin: '/admin/dashboard',
       };
@@ -45,7 +50,7 @@ export const PublicOnlyRoute = ({ children }) => {
 
   if (isAuthenticated) {
     const dashboards = {
-      student: '/student/dashboard',
+      student: user?.isProfileComplete ? '/student/dashboard' : '/complete-profile',
       counselor: '/counselor/dashboard',
       admin: '/admin/dashboard',
     };
@@ -54,3 +59,4 @@ export const PublicOnlyRoute = ({ children }) => {
 
   return children;
 };
+

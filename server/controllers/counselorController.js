@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const SlotCapacity = require('../models/SlotCapacity');
+const BlockedDate = require('../models/BlockedDate');
 const NotificationLog = require('../models/NotificationLog');
 const notificationService = require('../services/notificationService');
 const meetingService = require('../services/meetingService');
@@ -1392,6 +1393,141 @@ const getNotificationLogs = async (req, res, next) => {
   }
 };
 
+/**
+ * COUNSELOR AVAILABILITY & TIME SLOT MANAGEMENT
+ */
+
+// GET /api/counselor/availability?date=YYYY-MM-DD
+const getAvailability = async (req, res, next) => {
+  try {
+    const dateStr = req.query.date || new Date().toISOString().split('T')[0];
+    const dateObj = new Date(dateStr + 'T00:00:00');
+    const nextDay = new Date(dateObj);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    // Get blocked dates & slots
+    const blockedEntries = await BlockedDate.find({ date: dateStr });
+    const isDayBlocked = blockedEntries.some((b) => !b.slot);
+    const dayBlockedReason = blockedEntries.find((b) => !b.slot)?.reason || '';
+    const blockedSlotMap = {};
+    blockedEntries.filter((b) => b.slot).forEach((b) => {
+      blockedSlotMap[b.slot] = b.reason || 'Counselor Busy';
+    });
+
+    // Get appointments on this date
+    const appointments = await Appointment.find({
+      date: { $gte: dateObj, $lt: nextDay },
+      status: { $in: ['pending', 'approved', 'in_progress', 'completed'] },
+    }).select('timeSlot name enrollmentNo branch year issueCategory status severity isUrgent');
+
+    const appointmentSlotMap = {};
+    appointments.forEach((apt) => {
+      appointmentSlotMap[apt.timeSlot] = apt;
+    });
+
+    const slots = TIME_SLOTS.map((slot) => {
+      const apt = appointmentSlotMap[slot] || null;
+      const isSlotBlocked = !!blockedSlotMap[slot];
+      const blockedReason = blockedSlotMap[slot] || '';
+
+      let status = 'free';
+      if (apt) {
+        status = 'booked';
+      } else if (isDayBlocked || isSlotBlocked) {
+        status = 'busy';
+      }
+
+      return {
+        slot,
+        status, // 'free' | 'busy' | 'booked'
+        isFree: status === 'free',
+        isBusy: status === 'busy',
+        isBooked: status === 'booked',
+        blockedReason: isSlotBlocked ? blockedReason : (isDayBlocked ? dayBlockedReason : ''),
+        appointment: apt,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        date: dateStr,
+        isDayBlocked,
+        dayBlockedReason,
+        slots,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/counselor/availability/toggle-slot
+const toggleSlotAvailability = async (req, res, next) => {
+  try {
+    const { date, slot, isFree, reason } = req.body;
+    if (!date || !slot) {
+      return res.status(400).json({ success: false, message: 'Date and slot are required.' });
+    }
+
+    if (isFree) {
+      // Mark as free -> remove any block on this slot
+      await BlockedDate.deleteMany({ date, slot });
+    } else {
+      // Mark as busy -> create/update block
+      await BlockedDate.findOneAndUpdate(
+        { date, slot },
+        {
+          date,
+          slot,
+          reason: reason || 'Counselor Unavailable',
+          createdBy: req.user._id,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: isFree ? `Slot ${slot} marked as Free.` : `Slot ${slot} marked as Busy / Unavailable.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/counselor/availability/block-day
+const toggleDayAvailability = async (req, res, next) => {
+  try {
+    const { date, isBlocked, reason } = req.body;
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required.' });
+    }
+
+    if (isBlocked) {
+      await BlockedDate.findOneAndUpdate(
+        { date, slot: null },
+        {
+          date,
+          slot: null,
+          reason: reason || 'Counselor Out of Office / Leave',
+          createdBy: req.user._id,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      await BlockedDate.deleteMany({ date, slot: null });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: isBlocked ? `Entire day ${date} marked as Blocked.` : `Day ${date} marked as Available.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboard,
   getAppointments,
@@ -1412,4 +1548,7 @@ module.exports = {
   exportReportCSV,
   getAnalytics,
   getNotificationLogs,
+  getAvailability,
+  toggleSlotAvailability,
+  toggleDayAvailability,
 };

@@ -63,6 +63,24 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    // Sync role with environment configuration if needed
+    const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'amitmanmode01@gmail.com')
+      .toLowerCase()
+      .split(',')
+      .map((e) => e.trim());
+    const counselorEmails = (process.env.COUNSELOR_EMAILS || process.env.COUNSELOR_EMAIL || 'amitmanmode42@gmail.com,counselor@mitsgwl.ac.in')
+      .toLowerCase()
+      .split(',')
+      .map((e) => e.trim());
+
+    if (adminEmails.includes(user.email.toLowerCase()) && user.role !== 'admin') {
+      user.role = 'admin';
+      await user.save();
+    } else if (counselorEmails.includes(user.email.toLowerCase()) && user.role !== 'counselor') {
+      user.role = 'counselor';
+      await user.save();
+    }
+
     req.user = user;
     next();
   } catch (error) {

@@ -31,7 +31,11 @@ const Login = () => {
         counselor: '/counselor/dashboard',
         admin: '/admin/dashboard',
       };
-      navigate(dashboards[user.role] || '/');
+      if (user.role === 'student' && !user.isProfileComplete) {
+        navigate('/complete-profile');
+      } else {
+        navigate(dashboards[user.role] || '/');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Google Login failed. Please try again.');
     } finally {
@@ -252,7 +256,6 @@ const Login = () => {
                     <GoogleLogin
                       onSuccess={handleGoogleSuccess}
                       onError={() => setError('Google Login failed. Please try again.')}
-                      useOneTap
                       theme={isDark ? 'filled_black' : 'outline'}
                       shape="pill"
                       size="large"

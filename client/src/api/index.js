@@ -80,6 +80,9 @@ export const counselorAPI = {
   },
   getAnalytics: (params = {}) => api.get('/counselor/analytics', { params }),
   getNotificationLogs: (params = {}) => api.get('/counselor/notifications/log', { params }),
+  getAvailability: (date) => api.get(`/counselor/availability?date=${date}`),
+  toggleSlotAvailability: (data) => api.post('/counselor/availability/toggle-slot', data),
+  toggleDayAvailability: (data) => api.post('/counselor/availability/block-day', data),
 };
 
 // FAQ API

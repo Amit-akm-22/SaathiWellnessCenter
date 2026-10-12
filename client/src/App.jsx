@@ -13,6 +13,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import Screening from './pages/Screening';
 import BookAppointment from './pages/BookAppointment';
 import MyAppointments from './pages/MyAppointments';
+import ProfileCompletion from './pages/ProfileCompletion';
 
 // Counselor Pages
 import CounselorDashboard from './pages/counselor/CounselorDashboard';
@@ -22,9 +23,15 @@ import CounselorStudents from './pages/counselor/CounselorStudents';
 import CounselorReports from './pages/counselor/CounselorReports';
 import CounselorAnalytics from './pages/counselor/CounselorAnalytics';
 import CounselorNotifications from './pages/counselor/CounselorNotifications';
+import CounselorAvailability from './pages/counselor/CounselorAvailability';
+import CounselorLayout from './components/CounselorLayout';
+
+import AdminLayout from './components/AdminLayout';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminAccessControl from './pages/admin/AdminAccessControl';
+import AdminAcademicPrograms from './pages/admin/AdminAcademicPrograms';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminAppointments from './pages/admin/AdminAppointments';
 import AdminSettings from './pages/admin/AdminSettings';
@@ -37,7 +44,10 @@ function AppContent() {
   const location = useLocation();
   const { isDark } = useTheme();
   const isLoginPage = location.pathname === '/login';
-  const isAuth = isLoginPage;
+  const isProfileCompletePage = location.pathname === '/complete-profile';
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isCounselorRoute = location.pathname.startsWith('/counselor');
+  const hideNavAndFooter = isLoginPage || isProfileCompletePage || isAdminRoute || isCounselorRoute;
 
   return (
     <div
@@ -47,7 +57,7 @@ function AppContent() {
         isDark ? 'bg-[#101C28] text-[#F7F8FA]' : 'bg-[#FBF9F4] text-[#102D4F]'
       }`}
     >
-      {!isLoginPage && <Navbar />}
+      {!hideNavAndFooter && <Navbar />}
       <main className={`flex-1 ${isLoginPage ? 'h-full overflow-hidden flex flex-col justify-center' : ''}`}>
         <Routes>
           {/* Public routes */}
@@ -59,30 +69,40 @@ function AppContent() {
           <Route path="/register" element={<Navigate to="/login" replace />} />
 
           {/* Student routes */}
+          <Route path="/complete-profile" element={<ProtectedRoute role="student" allowIncomplete={true}><ProfileCompletion /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<Navigate to="/student/dashboard" replace />} />
           <Route path="/student/dashboard" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />
           <Route path="/student/screening" element={<ProtectedRoute role="student"><Screening /></ProtectedRoute>} />
           <Route path="/student/book" element={<ProtectedRoute role="student"><BookAppointment /></ProtectedRoute>} />
           <Route path="/student/appointments" element={<ProtectedRoute role="student"><MyAppointments /></ProtectedRoute>} />
 
-          {/* Counselor routes */}
-          <Route path="/counselor/dashboard" element={<ProtectedRoute role="counselor"><CounselorDashboard /></ProtectedRoute>} />
-          <Route path="/counselor/appointments" element={<ProtectedRoute role="counselor"><CounselorAppointments /></ProtectedRoute>} />
-          <Route path="/counselor/queue" element={<ProtectedRoute role="counselor"><CounselorQueue /></ProtectedRoute>} />
-          <Route path="/counselor/students" element={<ProtectedRoute role="counselor"><CounselorStudents /></ProtectedRoute>} />
-          <Route path="/counselor/reports" element={<ProtectedRoute role="counselor"><CounselorReports /></ProtectedRoute>} />
-          <Route path="/counselor/analytics" element={<ProtectedRoute role="counselor"><CounselorAnalytics /></ProtectedRoute>} />
-          <Route path="/counselor/notifications" element={<ProtectedRoute role="counselor"><CounselorNotifications /></ProtectedRoute>} />
+          {/* Counselor routes with dedicated Sidebar Layout */}
+          <Route path="/counselor" element={<Navigate to="/counselor/dashboard" replace />} />
+          <Route element={<ProtectedRoute role="counselor"><CounselorLayout /></ProtectedRoute>}>
+            <Route path="/counselor/dashboard" element={<CounselorDashboard />} />
+            <Route path="/counselor/appointments" element={<CounselorAppointments />} />
+            <Route path="/counselor/availability" element={<CounselorAvailability />} />
+            <Route path="/counselor/queue" element={<CounselorQueue />} />
+            <Route path="/counselor/students" element={<CounselorStudents />} />
+            <Route path="/counselor/reports" element={<CounselorReports />} />
+            <Route path="/counselor/analytics" element={<CounselorAnalytics />} />
+            <Route path="/counselor/notifications" element={<CounselorNotifications />} />
+          </Route>
 
-          {/* Admin routes */}
+          {/* Admin routes with dedicated Sidebar Layout */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUsers /></ProtectedRoute>} />
-          <Route path="/admin/appointments" element={<ProtectedRoute role="admin"><AdminAppointments /></ProtectedRoute>} />
-          <Route path="/admin/settings" element={<ProtectedRoute role="admin"><AdminSettings /></ProtectedRoute>} />
-          <Route path="/admin/blocked-dates" element={<ProtectedRoute role="admin"><AdminBlockedDates /></ProtectedRoute>} />
-          <Route path="/admin/faqs" element={<ProtectedRoute role="admin"><AdminFAQs /></ProtectedRoute>} />
-          <Route path="/admin/logs" element={<ProtectedRoute role="admin"><AdminLogs /></ProtectedRoute>} />
-          <Route path="/admin/export" element={<ProtectedRoute role="admin"><AdminExport /></ProtectedRoute>} />
+          <Route element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/access-control" element={<AdminAccessControl />} />
+            <Route path="/admin/academic-programs" element={<AdminAcademicPrograms />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/appointments" element={<AdminAppointments />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/blocked-dates" element={<AdminBlockedDates />} />
+            <Route path="/admin/faqs" element={<AdminFAQs />} />
+            <Route path="/admin/logs" element={<AdminLogs />} />
+            <Route path="/admin/export" element={<AdminExport />} />
+          </Route>
 
           {/* 404 */}
           <Route path="*" element={
@@ -94,7 +114,7 @@ function AppContent() {
           } />
         </Routes>
       </main>
-      {!isAuth && <Footer />}
+      {!hideNavAndFooter && <Footer />}
     </div>
   );
 }

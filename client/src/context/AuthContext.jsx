@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI } from '../api';
+import { authAPI, studentAPI } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -25,7 +25,9 @@ export const AuthProvider = ({ children }) => {
       }
       try {
         const res = await authAPI.getMe();
-        setUser(res.data.data.user);
+        const meUser = res.data.data.user;
+        setUser(meUser);
+        localStorage.setItem('user', JSON.stringify(meUser));
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -74,15 +76,35 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const updateUserDetails = useCallback(async (formData) => {
+    try {
+      const res = await studentAPI.updateProfile(formData);
+      const updatedUser = res.data?.data?.user || res.data?.user;
+      if (updatedUser) {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to update profile';
+      return { success: false, msg };
+    }
+  }, []);
+
   const value = {
     user,
+    setUser,
     loading,
     login,
     googleLogin,
     register,
     logout,
+    updateUserDetails,
     isAuthenticated: !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export default AuthContext;
+

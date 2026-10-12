@@ -5,6 +5,23 @@ const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Helper to determine role based on configuration
+const getTargetRole = (email, currentRole = 'student') => {
+  if (!email) return currentRole;
+  const adminEmails = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || 'amitmanmode01@gmail.com')
+    .toLowerCase()
+    .split(',')
+    .map((e) => e.trim());
+  const counselorEmails = (process.env.COUNSELOR_EMAILS || process.env.COUNSELOR_EMAIL || 'amitmanmode42@gmail.com,counselor@mitsgwl.ac.in')
+    .toLowerCase()
+    .split(',')
+    .map((e) => e.trim());
+
+  if (adminEmails.includes(email.toLowerCase())) return 'admin';
+  if (counselorEmails.includes(email.toLowerCase())) return 'counselor';
+  return currentRole;
+};
+
 // Generate JWT token
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -118,6 +135,12 @@ const login = async (req, res, next) => {
       });
     }
 
+    const targetRole = getTargetRole(email, user.role);
+    if (user.role !== targetRole) {
+      user.role = targetRole;
+      await user.save();
+    }
+
     const token = generateToken(user._id, user.role);
 
     // Set httpOnly cookie
@@ -159,6 +182,11 @@ const logout = async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = async (req, res) => {
+  const targetRole = getTargetRole(req.user.email, req.user.role);
+  if (req.user.role !== targetRole) {
+    req.user.role = targetRole;
+    await req.user.save();
+  }
   res.status(200).json({
     success: true,
     data: { user: req.user.toJSON() },
@@ -183,15 +211,16 @@ const googleLogin = async (req, res, next) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
+    const targetRole = getTargetRole(email, 'student');
+
     let user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      // Create a new student user if not found
       user = await User.create({
         name,
         email,
         googleId,
-        role: 'student',
+        role: targetRole,
         isActive: true,
       });
     } else {
@@ -201,9 +230,19 @@ const googleLogin = async (req, res, next) => {
           message: 'Your account has been deactivated. Please contact admin.',
         });
       }
+      let shouldSave = false;
       // If user exists but doesn't have googleId linked, update it
       if (!user.googleId) {
         user.googleId = googleId;
+        shouldSave = true;
+      }
+      // Elevate or sync role if needed
+      const expectedRole = getTargetRole(email, user.role);
+      if (user.role !== expectedRole) {
+        user.role = expectedRole;
+        shouldSave = true;
+      }
+      if (shouldSave) {
         await user.save();
       }
     }

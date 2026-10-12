@@ -38,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
   const isDark = theme === 'dark';
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark, isDarkMode: isDark, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -51,3 +51,5 @@ export const useTheme = () => {
   }
   return context;
 };
+
+export default ThemeContext;

@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const Appointment = require('../models/Appointment');
 const SlotCapacity = require('../models/SlotCapacity');
+const BlockedDate = require('../models/BlockedDate');
 const Notification = require('../models/Notification');
 const { TIME_SLOTS, MAX_BOOKINGS_PER_SLOT } = require('../config/constants');
 
@@ -139,8 +140,20 @@ const bookAppointment = async (req, res, next) => {
       });
     }
 
-    // ATOMIC slot capacity check - prevents race conditions
+    // Check if slot or whole day is blocked by Counselor
     const dateStr = appointmentDate.toISOString().split('T')[0];
+    const isBlocked = await BlockedDate.findOne({
+      date: dateStr,
+      $or: [{ slot: null }, { slot: timeSlot }],
+    });
+    if (isBlocked) {
+      return res.status(409).json({
+        success: false,
+        message: `Counselor is not available during this slot (${isBlocked.reason || 'Unavailable'}). Please pick another slot.`,
+      });
+    }
+
+    // ATOMIC slot capacity check - prevents race conditions
     const slotResult = await SlotCapacity.findOneAndUpdate(
       {
         date: dateStr,
@@ -491,6 +504,34 @@ const getAvailableSlots = async (req, res, next) => {
       });
     }
 
+    // Check if whole day or specific slots are blocked by Counselor
+    const blockedEntries = await BlockedDate.find({ date: dateStr });
+    const isDayBlocked = blockedEntries.some((b) => !b.slot);
+    if (isDayBlocked) {
+      const reason = blockedEntries.find((b) => !b.slot)?.reason || 'Counselor Unavailable';
+      return res.status(200).json({
+        success: true,
+        data: {
+          date: dateStr,
+          isBlocked: true,
+          reason,
+          slots: TIME_SLOTS.map((s) => ({
+            slot: s,
+            bookedCount: 0,
+            remaining: 0,
+            isFull: true,
+            isBlocked: true,
+            reason,
+          })),
+        },
+      });
+    }
+
+    const blockedSlotMap = {};
+    blockedEntries.filter((b) => b.slot).forEach((b) => {
+      blockedSlotMap[b.slot] = b.reason || 'Counselor Busy';
+    });
+
     // Get current capacity for all slots on this date
     const capacities = await SlotCapacity.find({ date: dateStr });
     const capacityMap = {};
@@ -499,13 +540,16 @@ const getAvailableSlots = async (req, res, next) => {
     });
 
     const slots = TIME_SLOTS.map((slot) => {
+      const isSlotBlocked = !!blockedSlotMap[slot];
       const bookedCount = capacityMap[slot] || 0;
-      const remaining = MAX_BOOKINGS_PER_SLOT - bookedCount;
+      const remaining = isSlotBlocked ? 0 : Math.max(0, MAX_BOOKINGS_PER_SLOT - bookedCount);
       return {
         slot,
         bookedCount,
-        remaining: Math.max(0, remaining),
-        isFull: remaining <= 0,
+        remaining,
+        isFull: isSlotBlocked || remaining <= 0,
+        isBlocked: isSlotBlocked,
+        reason: blockedSlotMap[slot] || '',
       };
     });
 
@@ -559,27 +603,64 @@ const submitScreening = async (req, res, next) => {
   }
 };
 
-// @desc    Update student profile (e.g. phone, branch, year, gender)
+// @desc    Update student profile (complete profile)
 // @route   PUT /api/student/profile
 // @access  Private (student)
 const updateProfile = async (req, res, next) => {
   try {
-    const { phone, branch, year, gender } = req.body;
+    const {
+      name,
+      rollNumber,
+      enrollmentNo,
+      degree,
+      department,
+      branch,
+      batch,
+      year,
+      mobile,
+      phone,
+      dob,
+      gender,
+      fatherName,
+      motherName,
+      address,
+    } = req.body;
+
     const user = await req.user;
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (phone !== undefined) user.phone = phone.trim();
-    if (branch) user.branch = branch;
+    if (name && !user.name) user.name = name.trim();
+    if (rollNumber || enrollmentNo) {
+      const roll = (rollNumber || enrollmentNo).trim();
+      user.rollNumber = roll;
+      if (!user.enrollmentNo) user.enrollmentNo = roll;
+    }
+    if (degree) user.degree = degree.trim();
+    if (department) user.department = department.trim();
+    if (branch) user.branch = branch.trim();
+    if (batch) user.batch = batch.trim();
     if (year) user.year = year;
+    if (mobile || phone) {
+      const p = (mobile || phone).trim();
+      user.mobile = p;
+      user.phone = p;
+    }
+    if (dob) user.dob = dob;
     if (gender) user.gender = gender;
+    if (fatherName) user.fatherName = fatherName.trim();
+    if (motherName) user.motherName = motherName.trim();
+    if (address) user.address = address.trim();
+
+    // Mark profile as complete once essential fields are provided
+    user.isProfileComplete = true;
 
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: 'Profile updated successfully',
+      message: 'Profile completed and updated successfully',
       data: { user: user.toJSON() },
     });
   } catch (error) {

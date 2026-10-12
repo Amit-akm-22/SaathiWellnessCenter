@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
       sparse: true, // allows null for counselors/admins
       trim: true,
     },
+    rollNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     googleId: {
       type: String,
       sparse: true,
@@ -38,25 +43,66 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'counselor', 'admin'],
       default: 'student',
     },
+    degree: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    department: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     branch: {
       type: String,
-      enum: ['CSE', 'IT', 'ECE', 'EE', 'Mechanical', 'Civil', 'Other', ''],
       default: '',
+      trim: true,
+    },
+    batch: {
+      type: String,
+      default: '',
+      trim: true,
     },
     year: {
       type: String,
-      enum: ['1st', '2nd', '3rd', '4th', ''],
       default: '',
     },
     gender: {
       type: String,
-      enum: ['Male', 'Female', 'Other', 'Prefer not to say', ''],
       default: '',
     },
     phone: {
       type: String,
       default: '',
       trim: true,
+    },
+    mobile: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    dob: {
+      type: String,
+      default: '',
+    },
+    fatherName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    motherName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    isProfileComplete: {
+      type: Boolean,
+      default: false,
     },
     // Counselor-specific
     specialization: {

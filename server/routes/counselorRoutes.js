@@ -20,6 +20,9 @@ const {
   exportReportCSV,
   getAnalytics,
   getNotificationLogs,
+  getAvailability,
+  toggleSlotAvailability,
+  toggleDayAvailability,
 } = require('../controllers/counselorController');
 
 const router = express.Router();
@@ -29,6 +32,11 @@ router.use(authMiddleware, roleMiddleware('counselor', 'admin'));
 
 // Dashboard
 router.get('/dashboard', getDashboard);
+
+// Availability & Time Slot Management (Free / Busy / Block day)
+router.get('/availability', getAvailability);
+router.post('/availability/toggle-slot', toggleSlotAvailability);
+router.post('/availability/block-day', toggleDayAvailability);
 
 // Appointments management
 router.get('/appointments', getAppointments);
@@ -59,3 +67,4 @@ router.get('/analytics', getAnalytics);
 router.get('/notifications/log', getNotificationLogs);
 
 module.exports = router;
+
